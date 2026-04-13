@@ -1,0 +1,12 @@
+{
+  "name": "whatsapp-bot-aniversarios",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "venom-bot": "^5.0.0",
+    "googleapis": "^105.0.0"
+  }
+}

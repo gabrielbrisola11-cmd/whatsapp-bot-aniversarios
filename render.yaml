@@ -1,0 +1,7 @@
+services:
+  - type: worker
+    name: whatsapp-bot-aniversarios
+    env: node
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "npm start"
