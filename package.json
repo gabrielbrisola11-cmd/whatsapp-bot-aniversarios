@@ -8,5 +8,8 @@
   "dependencies": {
     "venom-bot": "^5.0.0",
     "googleapis": "^105.0.0"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
