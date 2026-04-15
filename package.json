@@ -1,16 +1,19 @@
 {
   "name": "whatsapp-bot-aniversarios",
   "version": "1.0.0",
+  "description": "Bot de aniversários usando WA Automate Lite (sem Chromium)",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "postinstall": "npm rebuild"
+    "start": "node index.js"
   },
   "dependencies": {
-    "venom-bot": "4.0.0",
-    "googleapis": "^105.0.0"
+    "@open-wa/wa-automate-lite": "^4.0.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.0.0",
+    "winston": "^3.10.0",
+    "uuid": "^9.0.0"
   },
   "engines": {
-    "node": "20.x"
+    "node": ">=18"
   }
 }
