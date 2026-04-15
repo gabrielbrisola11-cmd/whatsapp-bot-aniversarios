@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: whatsapp-bot-aniversarios
+    env: node
+    buildCommand: npm install
+    startCommand: node index.js
+    build:
+      cache:
+        paths:
+          - node_modules
