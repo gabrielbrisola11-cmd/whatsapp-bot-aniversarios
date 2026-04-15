@@ -1,115 +1,116 @@
-import venom from 'venom-bot';
-import { google } from 'googleapis';
-import cron from 'node-cron';
+const venom = require('@open-wa/wa-automate-lite');
+const axios = require('axios');
+const dotenv = require('dotenv');
+const winston = require('winston');
+const { v4: uuidv4 } = require('uuid');
 
-// ===============================
-// CONFIGURAÇÃO DO GOOGLE SHEETS
-// ===============================
+dotenv.config();
 
-const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-
-const auth = new google.auth.GoogleAuth({
-  credentials,
-  scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
+// ---------------------------
+// LOGS
+// ---------------------------
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(info => `${info.timestamp} - ${info.level}: ${info.message}`)
+  ),
+  transports: [
+    new winston.transports.Console()
+  ]
 });
 
-const sheets = google.sheets({ version: 'v4', auth });
+// ---------------------------
+// INICIAR O BOT
+// ---------------------------
+venom.create({
+  sessionId: 'bot-aniversarios',
+  headless: true,
+  useChrome: false,
+  disableSpins: true,
+  logConsole: true
+})
+.then(client => start(client))
+.catch(err => logger.error(err));
 
-// ID da sua planilha
-const SPREADSHEET_ID = '1YLP8JR7AARn8hityU2hpukp_g3EZY4tHbBAJxUpF0CI';
+// ---------------------------
+// FUNÇÃO PRINCIPAL
+// ---------------------------
+async function start(client) {
+  logger.info("Bot iniciado com sucesso!");
 
-// Nome da aba e colunas
-const RANGE = 'Página1!A:C';
+  // ---------------------------
+  // RECEBER MENSAGENS
+  // ---------------------------
+  client.onMessage(async message => {
+    try {
+      if (message.body.toLowerCase() === 'ping') {
+        await client.sendText(message.from, 'pong');
+      }
 
-// ===============================
-// FUNÇÃO PARA LER ANIVERSARIANTES
-// ===============================
+      if (message.body.toLowerCase() === 'id') {
+        await client.sendText(message.from, `Seu ID é: ${uuidv4()}`);
+      }
 
-async function verificarAniversariantes(client) {
-  try {
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: RANGE
-    });
-
-    const rows = response.data.values;
-    if (!rows || rows.length === 0) {
-      console.log('Planilha vazia.');
-      return;
+    } catch (err) {
+      logger.error("Erro ao responder mensagem: " + err);
     }
+  });
 
-    const hoje = new Date();
-    const dia = hoje.getDate();
-    const mes = hoje.getMonth() + 1;
-
-    const aniversariantes = rows.filter((linha) => {
-      const [nome, data] = linha;
-      if (!data) return false;
-
-      const [ano, mesNasc, diaNasc] = data.split('-').map(Number);
-      return diaNasc === dia && mesNasc === mes;
-    });
-
-    if (aniversariantes.length === 0) {
-      console.log('Nenhum aniversariante hoje.');
-      return;
-    }
-
-    for (const pessoa of aniversariantes) {
-      const nome = pessoa[0];
-      const mensagem = `🎉 *Hoje é aniversário de ${nome}!* 🎉\n\nParabéns! 🎂🥳`;
-
-      await client.sendText(
-        '5511996774201-1619623995@g.us', // ID do seu grupo
-        mensagem
-      );
-    }
-
-    console.log('Mensagens enviadas com sucesso!');
-  } catch (error) {
-    console.error('Erro ao verificar aniversariantes:', error);
-  }
+  // Inicia o agendamento diário
+  agendarExecucaoDiaria(() => enviarMensagensDeAniversario(client));
 }
 
-// ===============================
-// INICIALIZAÇÃO DO BOT
-// ===============================
+// ---------------------------
+// AGENDAR EXECUÇÃO DIÁRIA ÀS 08:00
+// ---------------------------
+function agendarExecucaoDiaria(callback) {
+  const agora = new Date();
+  const proximaExecucao = new Date();
 
-venom
-  .create({
-    session: 'bot-aniversarios',
-    multidevice: true,
-    headless: true,
-    browserArgs: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--disable-software-rasterizer',
-      '--disable-dev-tools',
-      '--no-zygote',
-      '--single-process'
-    ]
-  })
-  .then((client) => {
-    console.log('Bot iniciado com sucesso!');
+  proximaExecucao.setHours(8, 0, 0, 0); // 08:00
 
-    // Executa imediatamente ao iniciar
-    verificarAniversariantes(client);
+  // Se já passou das 08:00 hoje, agenda para amanhã
+  if (agora > proximaExecucao) {
+    proximaExecucao.setDate(proximaExecucao.getDate() + 1);
+  }
 
-    // ===============================
-    // CRON DIÁRIO ÀS 08:00
-    // ===============================
-    cron.schedule(
-      '0 8 * * *',
-      () => {
-        verificarAniversariantes(client);
-      },
-      {
-        timezone: 'America/Sao_Paulo'
+  const tempoAteExecucao = proximaExecucao - agora;
+
+  logger.info(`Próxima execução agendada para: ${proximaExecucao}`);
+
+  setTimeout(() => {
+    callback(); // executa às 08:00
+    agendarExecucaoDiaria(callback); // agenda o próximo dia
+  }, tempoAteExecucao);
+}
+
+// ---------------------------
+// ENVIO AUTOMÁTICO DE ANIVERSÁRIOS
+// ---------------------------
+async function enviarMensagensDeAniversario(client) {
+  try {
+    logger.info("Executando rotina diária de aniversários...");
+
+    const hoje = new Date().toISOString().slice(5, 10); // MM-DD
+
+    // Exemplo de lista de aniversários
+    const aniversarios = [
+      { nome: "João", data: "04-15", numero: "5511999999999@c.us" },
+      { nome: "Maria", data: "04-20", numero: "5511888888888@c.us" }
+    ];
+
+    aniversarios.forEach(async pessoa => {
+      if (pessoa.data === hoje) {
+        await client.sendText(
+          pessoa.numero,
+          `🎉 Feliz aniversário, ${pessoa.nome}! 🎂`
+        );
+        logger.info(`Mensagem enviada para ${pessoa.nome}`);
       }
-    );
+    });
 
-    console.log('Agendador configurado para 08:00 todos os dias.');
-  })
-  .catch((error) => console.error(error));
+  } catch (err) {
+    logger.error("Erro no envio automático: " + err);
+  }
+}
