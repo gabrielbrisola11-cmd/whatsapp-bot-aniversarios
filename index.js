@@ -1,4 +1,4 @@
-const venom = require('@open-wa/wa-automate-lite');
+const venom = require('venom-bot-lite');
 const axios = require('axios');
 const dotenv = require('dotenv');
 const winston = require('winston');
@@ -23,15 +23,16 @@ const logger = winston.createLogger({
 // ---------------------------
 // INICIAR O BOT
 // ---------------------------
-venom.create({
-  sessionId: 'bot-aniversarios',
-  headless: true,
-  useChrome: false,
-  disableSpins: true,
-  logConsole: true
-})
-.then(client => start(client))
-.catch(err => logger.error(err));
+venom
+  .create({
+    session: 'bot-aniversarios',
+    disableWelcome: true,
+    headless: true,
+    browserArgs: ['--no-sandbox'],
+    disableSpins: true
+  })
+  .then(client => start(client))
+  .catch(err => logger.error(err));
 
 // ---------------------------
 // FUNÇÃO PRINCIPAL
@@ -70,7 +71,6 @@ function agendarExecucaoDiaria(callback) {
 
   proximaExecucao.setHours(8, 0, 0, 0); // 08:00
 
-  // Se já passou das 08:00 hoje, agenda para amanhã
   if (agora > proximaExecucao) {
     proximaExecucao.setDate(proximaExecucao.getDate() + 1);
   }
@@ -80,8 +80,8 @@ function agendarExecucaoDiaria(callback) {
   logger.info(`Próxima execução agendada para: ${proximaExecucao}`);
 
   setTimeout(() => {
-    callback(); // executa às 08:00
-    agendarExecucaoDiaria(callback); // agenda o próximo dia
+    callback();
+    agendarExecucaoDiaria(callback);
   }, tempoAteExecucao);
 }
 
@@ -94,7 +94,6 @@ async function enviarMensagensDeAniversario(client) {
 
     const hoje = new Date().toISOString().slice(5, 10); // MM-DD
 
-    // Exemplo de lista de aniversários
     const aniversarios = [
       { nome: "João", data: "04-15", numero: "5511999999999@c.us" },
       { nome: "Maria", data: "04-20", numero: "5511888888888@c.us" }
