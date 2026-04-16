@@ -33,11 +33,13 @@ venom
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
-      '--disable-software-rasterizer'
+      '--disable-software-rasterizer',
+      '--single-process',
+      '--no-zygote'
     ]
   })
   .then(client => start(client))
-  .catch(err => logger.error(err));
+  .catch(err => logger.error('Erro ao iniciar o Venom: ' + err));
 
 // ---------------------------
 // FUNÇÃO PRINCIPAL
@@ -50,11 +52,13 @@ async function start(client) {
   // ---------------------------
   client.onMessage(async message => {
     try {
-      if (message.body.toLowerCase() === 'ping') {
+      const texto = message.body?.toLowerCase() || '';
+
+      if (texto === 'ping') {
         await client.sendText(message.from, 'pong');
       }
 
-      if (message.body.toLowerCase() === 'id') {
+      if (texto === 'id') {
         await client.sendText(message.from, `Seu ID é: ${uuidv4()}`);
       }
 
