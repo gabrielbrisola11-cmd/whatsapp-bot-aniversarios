@@ -1,4 +1,4 @@
-const venom = require('venom-bot-lite');
+const venom = require('venom-bot');
 const axios = require('axios');
 const dotenv = require('dotenv');
 const winston = require('winston');
@@ -26,10 +26,15 @@ const logger = winston.createLogger({
 venom
   .create({
     session: 'bot-aniversarios',
-    disableWelcome: true,
     headless: true,
-    browserArgs: ['--no-sandbox'],
-    disableSpins: true
+    disableWelcome: true,
+    browserArgs: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-software-rasterizer'
+    ]
   })
   .then(client => start(client))
   .catch(err => logger.error(err));
