@@ -1,8 +1,8 @@
 const venom = require('venom-bot');
-const axios = require('axios');
 const dotenv = require('dotenv');
 const winston = require('winston');
 const { v4: uuidv4 } = require('uuid');
+const { getSheetData } = require('./sheets');
 
 dotenv.config();
 
@@ -15,9 +15,7 @@ const logger = winston.createLogger({
     winston.format.timestamp(),
     winston.format.printf(info => `${info.timestamp} - ${info.level}: ${info.message}`)
   ),
-  transports: [
-    new winston.transports.Console()
-  ]
+  transports: [new winston.transports.Console()]
 });
 
 // ---------------------------
@@ -62,6 +60,11 @@ async function start(client) {
         await client.sendText(message.from, `Seu ID é: ${uuidv4()}`);
       }
 
+      if (texto === 'aniversarios') {
+        const lista = await listarAniversarios();
+        await client.sendText(message.from, lista);
+      }
+
     } catch (err) {
       logger.error("Erro ao responder mensagem: " + err);
     }
@@ -95,28 +98,51 @@ function agendarExecucaoDiaria(callback) {
 }
 
 // ---------------------------
+// LISTAR ANIVERSÁRIOS (comando manual)
+// ---------------------------
+async function listarAniversarios() {
+  try {
+    const dados = await getSheetData();
+    let texto = "🎂 *Lista de aniversários cadastrados:*\n\n";
+
+    for (let i = 1; i < dados.length; i++) {
+      const [nome, data, numero] = dados[i];
+      if (!nome || !data || !numero) continue;
+
+      texto += `• ${nome} — ${data} — ${numero}\n`;
+    }
+
+    return texto;
+
+  } catch (err) {
+    logger.error("Erro ao listar aniversários: " + err);
+    return "Erro ao acessar a planilha.";
+  }
+}
+
+// ---------------------------
 // ENVIO AUTOMÁTICO DE ANIVERSÁRIOS
 // ---------------------------
 async function enviarMensagensDeAniversario(client) {
   try {
-    logger.info("Executando rotina diária de aniversários...");
+    logger.info("Lendo aniversários do Google Sheets...");
 
+    const dados = await getSheetData();
     const hoje = new Date().toISOString().slice(5, 10); // MM-DD
 
-    const aniversarios = [
-      { nome: "João", data: "04-15", numero: "5511999999999@c.us" },
-      { nome: "Maria", data: "04-20", numero: "5511888888888@c.us" }
-    ];
+    for (let i = 1; i < dados.length; i++) {
+      const [nome, data, numero] = dados[i];
 
-    aniversarios.forEach(async pessoa => {
-      if (pessoa.data === hoje) {
+      if (!nome || !data || !numero) continue;
+
+      if (data === hoje) {
         await client.sendText(
-          pessoa.numero,
-          `🎉 Feliz aniversário, ${pessoa.nome}! 🎂`
+          numero + '@c.us',
+          `🎉 Feliz aniversário, ${nome}! 🎂`
         );
-        logger.info(`Mensagem enviada para ${pessoa.nome}`);
+        logger.info(`Mensagem enviada para ${nome}`);
       }
-    });
+    }
 
   } catch (err) {
     logger.error("Erro no envio automático: " + err);
